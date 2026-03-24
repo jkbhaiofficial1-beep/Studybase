@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abhyas Saathi - Ultimate Study OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #4f46e5; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+        
+        .sidebar-active { background-color: var(--primary); color: white; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+        .card { background-color: var(--card); border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s ease; }
+        
+        @media (max-width: 768px) {
+            #sidebar { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed; height: 100vh; z-index: 50; }
+            #sidebar.open { transform: translateX(0); }
+            .mobile-compact-p { padding: 1rem !important; }
+            .mobile-card-p { padding: 1.25rem !important; }
+            .mobile-text-title { font-size: 1.5rem !important; }
+        }
+
+        #editorContent, #viewContent { min-height: 250px; outline: none; padding: 15px; border-radius: 1rem; background: white; font-size: 15px; line-height: 1.6; }
+        #editorContent h2, #viewContent h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; color: #1e1b4b; }
+        
+        .toolbar-btn { padding: 6px 10px; border-radius: 8px; transition: all 0.2s; font-weight: 700; color: #64748b; font-size: 10px; display: flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; background: white; }
+        .toolbar-btn:hover { background: #f1f5f9; color: #4f46e5; }
+        
+        .search-input { width: 100%; padding: 10px 16px 10px 40px; border-radius: 12px; border: 1px solid #e2e8f0; outline: none; font-weight: 600; font-size: 13px; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex bg-slate-50">
+
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden"></div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="w-64 bg-white border-r p-5 flex flex-col gap-6 shadow-sm">
+        <div class="flex items-center gap-3 px-2">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg font-bold text-xl">A+</div>
+            <div>
+                <h1 class="text-lg font-black tracking-tight">Abhyas OS</h1>
+                <p class="text-[8px] uppercase font-black text-indigo-400 tracking-widest">Mobile Edition</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+            <button onclick="showSection('dashboard')" id="btn-dashboard" class="sidebar-item sidebar-active flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                Dashboard
+            </button>
+            <button onclick="showSection('notes')" id="btn-notes" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-50 transition-all text-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Notebook
+            </button>
+            <button onclick="showSection('lectures')" id="btn-lectures" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-50 transition-all text-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4V8Z"/></svg>
+                Lectures
+            </button>
+        </div>
+        
+        <div class="mt-auto border-t pt-5 space-y-2">
+            <button onclick="exportData()" class="w-full text-[9px] font-black text-slate-500 flex items-center gap-2 p-2 rounded-lg hover:bg-indigo-50 uppercase tracking-widest">
+                Export
+            </button>
+            <button onclick="document.getElementById('importFile').click()" class="w-full text-[9px] font-black text-slate-500 flex items-center gap-2 p-2 rounded-lg hover:bg-emerald-50 uppercase tracking-widest">
+                Import
+            </button>
+            <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-5 md:p-10 overflow-y-auto h-screen mobile-compact-p">
+        
+        <!-- Mobile Toggle -->
+        <div class="md:hidden flex items-center justify-between mb-5">
+            <button onclick="toggleSidebar()" class="p-2 bg-white rounded-lg border shadow-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+            <h1 class="text-base font-black">Abhyas Saathi</h1>
+            <div class="w-8"></div>
+        </div>
+
+        <!-- Header -->
+        <header class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h2 id="section-title" class="text-2xl md:text-3xl font-black text-slate-800 mobile-text-title">Dashboard</h2>
+                <p id="section-subtitle" class="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wide">Prakshali Workspace</p>
+            </div>
+            
+            <div id="search-container" class="relative hidden w-full md:max-w-xs">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="globalSearch" oninput="handleSearch(this.value)" placeholder="Search here..." class="search-input">
+            </div>
+        </header>
+
+        <!-- DASHBOARD -->
+        <div id="section-dashboard" class="content-section space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="card p-5 rounded-2xl bg-indigo-600 text-white shadow-lg flex justify-between items-center mobile-card-p">
+                    <div>
+                        <p class="opacity-70 font-bold text-[8px] uppercase tracking-widest">Notes</p>
+                        <h3 id="stat-notes" class="text-3xl font-black mt-1">0</h3>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg></div>
+                </div>
+                <div class="card p-5 rounded-2xl bg-white border flex justify-between items-center mobile-card-p">
+                    <div>
+                        <p class="text-slate-400 font-bold text-[8px] uppercase tracking-widest">Books</p>
+                        <h3 id="stat-books" class="text-3xl font-black mt-1 text-slate-800">0</h3>
+                    </div>
+                    <div class="p-2 bg-slate-50 text-indigo-500 rounded-lg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+                </div>
+                <div class="card p-5 rounded-2xl bg-emerald-500 text-white shadow-lg flex justify-between items-center mobile-card-p">
+                    <div>
+                        <p class="opacity-70 font-bold text-[8px] uppercase tracking-widest">Lectures</p>
+                        <h3 id="stat-lectures" class="text-3xl font-black mt-1">0</h3>
+                    </div>
+                    <div class="p-2 bg-white/10 rounded-lg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="14" height="12" rx="2"/></svg></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Recent Activity</h4>
+                <div id="recent-activity" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div id="section-content" class="content-section hidden">
+            
+            <!-- Books List -->
+            <div id="books-view" class="space-y-4">
+                <div class="card p-3 rounded-xl flex gap-2 items-center bg-white border shadow-sm">
+                    <input type="text" id="bookInput" placeholder="New Subject Name..." class="flex-1 px-4 py-2.5 rounded-lg bg-slate-50 border-none outline-none font-bold text-sm">
+                    <button onclick="addBook()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-black text-xs shadow-md">Add</button>
+                </div>
+                <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Chapters List -->
+            <div id="chapters-view" class="hidden space-y-4">
+                <button onclick="backToBooks()" class="text-indigo-600 font-black flex items-center gap-1 text-xs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m15 18-6-6 6-6"/></svg> Back to Library</button>
+                <div class="card p-3 rounded-xl flex gap-2 items-center bg-white border">
+                    <input type="text" id="chapterInput" placeholder="New Chapter Name..." class="flex-1 px-4 py-2.5 rounded-lg bg-slate-50 border-none outline-none font-bold text-sm">
+                    <button onclick="addChapter()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-black text-xs">Add</button>
+                </div>
+                <div id="chapters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Items Final View -->
+            <div id="final-view" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <button onclick="backToChapters()" class="text-indigo-600 font-black flex items-center gap-1 text-xs"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m15 18-6-6 6-6"/></svg> Back</button>
+                    <span id="breadcrumb" class="text-[8px] font-black uppercase text-slate-400 truncate max-w-[120px]"></span>
+                </div>
+
+                <!-- Notes Manager -->
+                <div id="notes-manager" class="hidden space-y-4">
+                    <div id="notes-list-view" class="space-y-3">
+                        <button onclick="openNoteEditor(null)" class="w-full py-8 bg-white border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-black text-sm flex flex-col items-center gap-2">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Add New Note
+                        </button>
+                        <div id="notes-stack" class="grid grid-cols-1 gap-2"></div>
+                    </div>
+
+                    <!-- Note Viewer -->
+                    <div id="note-viewer" class="hidden space-y-3">
+                        <div class="card p-5 rounded-2xl bg-white border shadow-md min-h-[300px]">
+                            <div id="viewContent" class="text-slate-700"></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editCurrentNote()" class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-black text-xs">Edit Note</button>
+                            <button onclick="closeNoteViewer()" class="px-5 bg-slate-100 text-slate-500 py-3 rounded-lg font-black text-xs">Close</button>
+                        </div>
+                    </div>
+
+                    <!-- Note Editor -->
+                    <div id="editor-view" class="hidden space-y-3">
+                        <div class="flex flex-wrap gap-1">
+                            <button onclick="execCmd('bold')" class="toolbar-btn">B</button>
+                            <button onclick="execCmd('italic')" class="toolbar-btn">I</button>
+                            <button onclick="execCmd('hiliteColor', '#fef08a')" class="toolbar-btn text-yellow-500">Highlight</button>
+                            <button onclick="addCheckbox()" class="toolbar-btn">Task</button>
+                        </div>
+                        <div id="editorContent" contenteditable="true" class="card border min-h-[300px] shadow-sm bg-white"></div>
+                        <div class="flex gap-2">
+                            <button onclick="saveNote()" class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-black text-xs shadow-md">Confirm & Save</button>
+                            <button onclick="closeNoteEditor()" class="px-5 bg-slate-100 text-slate-500 py-3 rounded-lg font-black text-xs">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sources Manager -->
+                <div id="sources-manager" class="hidden space-y-4">
+                    <div class="card p-4 rounded-xl flex flex-col gap-2 bg-white border">
+                        <input type="text" id="srcTitle" placeholder="Video Topic..." class="px-4 py-2.5 rounded-lg bg-slate-50 border-none outline-none font-bold text-sm">
+                        <input type="url" id="srcUrl" placeholder="Video Link..." class="px-4 py-2.5 rounded-lg bg-slate-50 border-none outline-none font-bold text-sm">
+                        <button onclick="addSource()" class="bg-indigo-600 text-white py-2.5 rounded-lg font-black text-xs">Save Source</button>
+                    </div>
+                    <div id="sources-list" class="grid grid-cols-1 gap-2"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast UI -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl transition-all transform translate-y-32 opacity-0 z-50 font-black text-[9px] uppercase tracking-widest">Done</div>
+
+    <script>
+        let notesDB = JSON.parse(localStorage.getItem('ab_notes_final')) || [];
+        let lectureDB = JSON.parse(localStorage.getItem('ab_lecs_final')) || [];
+        let mode = 'notes', selBook = null, selChapter = null, editingNoteId = null;
+        let searchQuery = "";
+
+        // UI Section Manager
+        function showSection(sec) {
+            document.querySelectorAll('.content-section').forEach(e => e.classList.add('hidden'));
+            document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('sidebar-active', 'text-slate-400'));
+            document.getElementById('globalSearch').value = ""; searchQuery = "";
+
+            if(sec === 'dashboard') {
+                document.getElementById('section-dashboard').classList.remove('hidden');
+                document.getElementById('btn-dashboard').classList.add('sidebar-active');
+                document.getElementById('section-title').innerText = "Dashboard";
+                document.getElementById('search-container').classList.add('hidden');
+                updateDashboard();
+            } else {
+                mode = sec;
+                document.getElementById('section-content').classList.remove('hidden');
+                document.getElementById(`btn-${sec}`).classList.add('sidebar-active');
+                document.getElementById('section-title').innerText = (mode === 'notes') ? "Notebook" : "Lectures";
+                document.getElementById('search-container').classList.remove('hidden');
+                backToBooks();
+            }
+            if(window.innerWidth < 768) toggleSidebar(false);
+        }
+
+        function getDB() { return (mode === 'notes') ? notesDB : lectureDB; }
+        function sync() {
+            localStorage.setItem('ab_notes_final', JSON.stringify(notesDB));
+            localStorage.setItem('ab_lecs_final', JSON.stringify(lectureDB));
+            updateDashboard();
+        }
+
+        // Search Logic
+        function handleSearch(val) {
+            searchQuery = val.toLowerCase().trim();
+            if(!document.getElementById('books-view').classList.contains('hidden')) renderBooks();
+            else if(!document.getElementById('chapters-view').classList.contains('hidden')) renderChapters();
+            else if(!document.getElementById('final-view').classList.contains('hidden')) {
+                if(mode === 'notes') renderNotesList();
+                else renderSources();
+            }
+        }
+
+        // Dashboard Stats & Feed
+        function updateDashboard() {
+            document.getElementById('stat-books').innerText = notesDB.length + lectureDB.length;
+            let n = 0; notesDB.forEach(b => b.chapters.forEach(c => n += c.notes.length));
+            document.getElementById('stat-notes').innerText = n;
+            let l = 0; lectureDB.forEach(b => b.chapters.forEach(c => l += c.sources.length));
+            document.getElementById('stat-lectures').innerText = l;
+
+            const feed = document.getElementById('recent-activity');
+            let items = [];
+            notesDB.forEach(b => b.chapters.forEach(c => c.notes.forEach(nt => {
+                items.push({ type: 'Note', text: nt.content.replace(/<[^>]*>/g, '').substring(0, 40), date: nt.date, book: b.name });
+            })));
+            items = items.slice(-4).reverse();
+            feed.innerHTML = items.length ? '' : '<p class="text-[9px] text-slate-300 font-bold uppercase">No recent data found</p>';
+            items.forEach(item => {
+                feed.innerHTML += `
+                    <div class="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center font-black text-[8px]">${item.type[0]}</div>
+                        <div class="flex-1 overflow-hidden">
+                            <h6 class="font-bold text-slate-800 text-[10px] truncate">${item.text}...</h6>
+                            <p class="text-[7px] font-black uppercase text-indigo-300">${item.book} • ${item.date}</p>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // --- BOOK LOGIC ---
+        function addBook() {
+            const val = document.getElementById('bookInput').value.trim();
+            if(!val) return;
+            getDB().unshift({ id: Date.now(), name: val, chapters: [] });
+            document.getElementById('bookInput').value = '';
+            sync(); renderBooks(); showToast("Subject Added");
+        }
+
+        function renderBooks() {
+            const grid = document.getElementById('books-grid');
+            const data = getDB().filter(b => b.name.toLowerCase().includes(searchQuery));
+            grid.innerHTML = data.length ? '' : '<div class="col-span-full py-10 text-center text-slate-300 text-xs font-bold uppercase">Library is empty</div>';
+            data.forEach(book => {
+                grid.innerHTML += `
+                    <div onclick="openBook(${book.id})" class="card p-5 rounded-2xl bg-white border shadow-sm cursor-pointer group">
+                        <div class="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-lg mb-3 flex items-center justify-center font-bold">B</div>
+                        <h4 class="text-sm font-black text-slate-800">${book.name}</h4>
+                        <p class="text-[8px] font-black text-slate-400 mt-1 uppercase">${book.chapters.length} Chapters</p>
+                        <div class="mt-4 flex gap-3 pt-3 border-t border-slate-50">
+                            <button onclick="event.stopPropagation(); renameBook(${book.id})" class="text-[8px] font-black text-indigo-500 uppercase">Rename</button>
+                            <button onclick="event.stopPropagation(); deleteBook(${book.id})" class="text-[8px] font-black text-red-300 uppercase">Delete</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function renameBook(id) {
+            const db = getDB();
+            const book = db.find(b => b.id === id);
+            const newName = prompt("Enter new subject name:", book.name);
+            if(newName && newName.trim()) {
+                book.name = newName.trim();
+                sync(); renderBooks();
+                showToast("Subject Renamed");
+            }
+        }
+
+        function openBook(id) {
+            selBook = getDB().find(b => b.id === id);
+            document.getElementById('books-view').classList.add('hidden');
+            document.getElementById('chapters-view').classList.remove('hidden');
+            renderChapters();
+        }
+
+        function backToBooks() {
+            selBook = null;
+            document.getElementById('books-view').classList.remove('hidden');
+            document.getElementById('chapters-view').classList.add('hidden');
+            document.getElementById('final-view').classList.add('hidden');
+            renderBooks();
+        }
+
+        // --- CHAPTER LOGIC ---
+        function addChapter() {
+            const val = document.getElementById('chapterInput').value.trim();
+            if(!val) return;
+            selBook.chapters.unshift({ id: Date.now(), name: val, notes: [], sources: [] });
+            document.getElementById('chapterInput').value = '';
+            sync(); renderChapters();
+        }
+
+        function renderChapters() {
+            const grid = document.getElementById('chapters-grid');
+            const data = selBook.chapters.filter(c => c.name.toLowerCase().includes(searchQuery));
+            grid.innerHTML = data.length ? '' : '<div class="col-span-full py-8 text-center text-slate-400 font-bold text-xs">No Chapters found</div>';
+            data.forEach(ch => {
+                grid.innerHTML += `
+                    <div onclick="openChapter(${ch.id})" class="card p-5 rounded-2xl bg-white border shadow-sm cursor-pointer">
+                        <h5 class="font-black text-sm text-slate-800">${ch.name}</h5>
+                        <p class="text-[8px] font-black text-slate-400 mt-1 uppercase">${mode === 'notes' ? ch.notes.length + ' Notes' : ch.sources.length + ' Links'}</p>
+                        <div class="mt-4 flex gap-3 pt-2 border-t border-slate-50">
+                            <button onclick="event.stopPropagation(); renameChapter(${ch.id})" class="text-[8px] font-black text-indigo-500 uppercase">Rename</button>
+                            <button onclick="event.stopPropagation(); deleteChapter(${ch.id})" class="text-[8px] font-black text-red-300 uppercase">Delete</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function renameChapter(id) {
+            const ch = selBook.chapters.find(c => c.id === id);
+            const newName = prompt("Enter new chapter name:", ch.name);
+            if(newName && newName.trim()) {
+                ch.name = newName.trim();
+                sync(); renderChapters();
+                showToast("Chapter Renamed");
+            }
+        }
+
+        function openChapter(id) {
+            selChapter = selBook.chapters.find(c => c.id === id);
+            document.getElementById('chapters-view').classList.add('hidden');
+            document.getElementById('final-view').classList.remove('hidden');
+            document.getElementById('breadcrumb').innerText = `${selBook.name} / ${selChapter.name}`;
+            if(mode === 'notes') {
+                document.getElementById('notes-manager').classList.remove('hidden');
+                document.getElementById('sources-manager').classList.add('hidden');
+                renderNotesList();
+            } else {
+                document.getElementById('notes-manager').classList.add('hidden');
+                document.getElementById('sources-manager').classList.remove('hidden');
+                renderSources();
+            }
+        }
+
+        function backToChapters() {
+            selChapter = null;
+            document.getElementById('chapters-view').classList.remove('hidden');
+            document.getElementById('final-view').classList.add('hidden');
+            renderChapters();
+        }
+
+        // --- NOTES LOGIC ---
+        function renderNotesList() {
+            document.getElementById('notes-list-view').classList.remove('hidden');
+            document.getElementById('editor-view').classList.add('hidden');
+            document.getElementById('note-viewer').classList.add('hidden');
+            const stack = document.getElementById('notes-stack');
+            const data = selChapter.notes.filter(n => n.content.toLowerCase().includes(searchQuery));
+            stack.innerHTML = data.length ? '' : '<p class="text-center py-10 text-slate-300 font-bold uppercase text-[8px]">Empty notebook</p>';
+            data.forEach(n => {
+                stack.innerHTML += `
+                    <div class="card p-4 rounded-xl bg-white border flex justify-between items-center">
+                        <div class="flex-1 cursor-pointer pr-3" onclick="openNoteViewer(${n.id})">
+                            <div class="text-slate-600 line-clamp-1 text-xs font-bold">${n.content.replace(/<[^>]*>/g, '')}</div>
+                            <span class="text-[7px] font-black text-slate-300 uppercase mt-1 block">${n.date}</span>
+                        </div>
+                        <button onclick="deleteNote(${n.id})" class="p-2 text-red-400"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg></button>
+                    </div>`;
+            });
+        }
+
+        function openNoteViewer(id) {
+            editingNoteId = id;
+            const note = selChapter.notes.find(x => x.id === id);
+            document.getElementById('notes-list-view').classList.add('hidden');
+            document.getElementById('note-viewer').classList.remove('hidden');
+            document.getElementById('viewContent').innerHTML = note.content;
+        }
+
+        function closeNoteViewer() { 
+            editingNoteId = null; 
+            document.getElementById('note-viewer').classList.add('hidden'); 
+            document.getElementById('notes-list-view').classList.remove('hidden'); 
+        }
+
+        function editCurrentNote() {
+            const content = document.getElementById('viewContent').innerHTML;
+            document.getElementById('note-viewer').classList.add('hidden');
+            document.getElementById('editor-view').classList.remove('hidden');
+            document.getElementById('editorContent').innerHTML = content;
+            document.getElementById('editorContent').focus();
+        }
+
+        function openNoteEditor(id) {
+            editingNoteId = id;
+            document.getElementById('notes-list-view').classList.add('hidden');
+            document.getElementById('editor-view').classList.remove('hidden');
+            document.getElementById('editorContent').innerHTML = id ? selChapter.notes.find(x => x.id === id).content : '';
+            document.getElementById('editorContent').focus();
+        }
+
+        function closeNoteEditor() {
+            document.getElementById('editor-view').classList.add('hidden');
+            if(editingNoteId) document.getElementById('note-viewer').classList.remove('hidden');
+            else document.getElementById('notes-list-view').classList.remove('hidden');
+        }
+
+        function saveNote() {
+            const content = document.getElementById('editorContent').innerHTML;
+            if(!content || content === '<br>') return;
+            if(editingNoteId) {
+                const note = selChapter.notes.find(n => n.id === editingNoteId);
+                note.content = content;
+                note.date = "Edited: " + new Date().toLocaleDateString();
+            } else {
+                selChapter.notes.unshift({ id: Date.now(), content, date: new Date().toLocaleDateString() });
+            }
+            sync(); showToast("Note Saved"); 
+            editingNoteId = null; 
+            document.getElementById('editor-view').classList.add('hidden');
+            renderNotesList();
+        }
+
+        // --- SOURCES LOGIC ---
+        function addSource() {
+            const t = document.getElementById('srcTitle').value.trim();
+            const u = document.getElementById('srcUrl').value.trim();
+            if(!t || !u) return;
+            selChapter.sources.unshift({ id: Date.now(), title: t, url: u });
+            document.getElementById('srcTitle').value = '';
+            document.getElementById('srcUrl').value = '';
+            sync(); renderSources();
+        }
+
+        function renderSources() {
+            const list = document.getElementById('sources-list');
+            const data = selChapter.sources.filter(s => s.title.toLowerCase().includes(searchQuery));
+            list.innerHTML = data.length ? '' : '<p class="text-center py-8 text-slate-300 font-bold uppercase text-[8px]">No links</p>';
+            data.forEach(s => {
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-3 bg-white border rounded-xl shadow-sm">
+                        <div class="overflow-hidden pr-3"><h6 class="font-black text-slate-800 text-[10px] truncate">${s.title}</h6><p class="text-[7px] font-bold text-indigo-400 truncate">${s.url}</p></div>
+                        <div class="flex gap-1">
+                            <button onclick="window.open('${s.url}', '_blank')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[8px] font-black">OPEN</button>
+                            <button onclick="deleteSource(${s.id})" class="p-1.5 text-red-300">✕</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // --- UTILS ---
+        function toggleSidebar(force) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            if(force !== undefined) {
+                if(force) { sidebar.classList.add('open'); overlay.classList.remove('hidden'); }
+                else { sidebar.classList.remove('open'); overlay.classList.add('hidden'); }
+            } else {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('hidden');
+            }
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m;
+            t.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-32', 'opacity-0'), 2000);
+        }
+
+        function execCmd(cmd, val = null) { document.execCommand(cmd, false, val); document.getElementById('editorContent').focus(); }
+        
+        function addCheckbox() {
+            const checkbox = '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;"><input type="checkbox" style="accent-color:#4f46e5;"> <span style="font-weight:600; font-size:13px;">Task...</span></div>';
+            execCmd('insertHTML', checkbox);
+        }
+
+        function deleteNote(id) { if(confirm("Delete this note?")) { selChapter.notes = selChapter.notes.filter(n => n.id !== id); sync(); renderNotesList(); } }
+        function deleteSource(id) { if(confirm("Delete link?")) { selChapter.sources = selChapter.sources.filter(s => s.id !== id); sync(); renderSources(); } }
+        function deleteBook(id) { if(confirm("Delete Subject and its data?")) { if(mode === 'notes') notesDB = notesDB.filter(x => x.id !== id); else lectureDB = lectureDB.filter(x => x.id !== id); sync(); renderBooks(); } }
+        function deleteChapter(id) { if(confirm("Delete Chapter?")) { selBook.chapters = selBook.chapters.filter(c => c.id !== id); sync(); renderChapters(); } }
+
+        function exportData() {
+            const data = { notes: notesDB, lecs: lectureDB };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `AbhyasOS_Backup.json`;
+            a.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    notesDB = data.notes || []; lectureDB = data.lecs || [];
+                    sync(); showToast("Restored"); showSection('dashboard');
+                } catch { showToast("Error Importing"); }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = () => updateDashboard();
+    </script>
+</body>
+</html>
+
